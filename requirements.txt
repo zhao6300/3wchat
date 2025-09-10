@@ -1,0 +1,7 @@
+requests>=2.31.0
+openai>=1.106.1
+gradio>=5.44.1
+pydantic>=2.11.7
+langchain>=0.3.26
+langgraph>=0.6.6
+langchain_google_genai>=2.1.10

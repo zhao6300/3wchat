@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "3W-Chat"
+version = "0.1.0"
+description = "3W Chat project"
+readme = "README.md"
+requires-python = ">=3.12"
+
+
+authors = [{ name = "今日搬了什么砖", email = "zhao6305@gmail.com" }]
+license = { text = "MIT" }
+
+dependencies = [
+    "requests>=2.31.0",
+    "openai>=1.1.0",
+    "gradio>=5.44.1",
+    "pydantic>=2.11.7",
+    "langchain>=0.3.26",
+    "langgraph>=0.6.6",
+    "langchain_google_genai>=2.1.10",
+]
+
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+include = '\.pyi?$'
+extend-exclude = '''
+# A regex preceded with ^/ will apply only to files and directories
+# in the root of the project.
+^/build/
+'''
