@@ -75,7 +75,10 @@ Web UI 界面右侧的“AI 在想什么”面板会实时展示 AI 的思考过
 
 ### 2. 克隆仓库
 ```bash
+git clone https://github.com/zhao6300/3wchat.git
+或者
 git clone https://gitee.com/ht6300/3wchat.git
+
 cd 3wchat
 ```
 
