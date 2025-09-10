@@ -1,4 +1,14 @@
 # -*- coding: utf-8 -*-
+# -----------------------------------------------------------------------------
+# 文件名: 3w_chat.py
+#
+# 作者: 今日搬了什么砖
+#
+# 描述: 这是一个教学示例，展示如何构建一个多轮对话系统，集成用户画像、情境分析、行动策略规划和多模态处理等功能。
+#
+# -----------------------------------------------------------------------------
+
+
 import os
 import json
 import logging
@@ -7,7 +17,6 @@ import re
 from enum import Enum
 import requests
 from typing import List, Dict, Any, Tuple, Iterator, Optional, TypedDict, Annotated
-import operator
 from abc import ABC, abstractmethod
 import gradio as gr
 from openai import OpenAI, OpenAIError
