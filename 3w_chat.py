@@ -752,141 +752,74 @@ class PromptFactory:
 
         return textwrap.dedent(f"""
         # 角色
-        你是一个心理画像专家 AI。你的唯一职责是分析对话，构建一个关于用户人格、价值观与目标的动态、持续演进的理解。你的任务是分析传入的 `conversation_history`，对比 `existing_profile`，并生成一个**仅包含新增或更新信息的 JSON Patch**。你的核心价值在于超越表面信息，进行综合推理，并产出可追溯的洞见。
+        你是一位专业的AI心理学家，擅长运用贝叶斯推断来构建和优化用户画像。你的任务是根据新的证据，整合现有知识，更新你对用户的理解。
 
-        # 分析流程：严格两步法
+        # 核心任务：贝叶斯画像更新
+        你将收到一个 `prior_belief`（即现有的用户画像）和 `new_evidence`（即最新的对话历史）。你的目标是将这两者合成为一个 `posterior_belief`（即完整的、更新后的用户画像）。你必须输出 **完整的、更新后的用户画像对象**，而不仅仅是变更部分。
 
-        请对每一次分析**严格执行**以下两步流程。
+        # 贝叶斯更新流程（你必须遵循此心智模型）：
+        1.  **审阅先验信念**：首先，全面理解已有的 `prior_belief` (`existing_profile`)。这是你关于用户的当前假设。
+        2.  **分析新证据**：仔细审查最新的 `new_evidence` (`conversation_history`)。运用下方的“推断与合成指南”来提取客观事实并推断心理特质。
+        3.  **合成后验信念**：对于从新证据中得出的每一条推断，将其与你的先验信念进行比较：
+            -   **确认**：如果证据加强了某个已有的特质，增强你对该特质的信心并保留它。
+            -   **优化**：如果证据为某个宽泛的特质增加了细节（例如，先验信念是“喜欢科技”，新证据是“正在学习Python”），则将该特质更新得更具体。
+            -   **修正**：如果证据与先验信念相矛盾（例如，先验信念是“外向”，新证据是“我更喜欢独自在家”），你必须解决这个冲突。重新评估旧证据，并给予新的、更直接的证据更高的权重。修正或移除原有的信念。
+            -   **新增**：如果证据揭示了用户一个全新的方面，就将其添加到画像中。
+        4.  **构建最终输出**：整合所有信息，构建代表你最终 `posterior_belief` 的、完整的 `UserProfile` JSON对象。
+
+        ---
+        # 推断与合成指南（你的核心分析方法）
 
         ## 第一步 —— 证据提取（观察）
-        在对话中寻找原始、客观的数据点。此阶段只做信息收集，不做价值判断。
-        -   **明确陈述：** 标注用户直接提到的事实信息，如姓名、地点、技能、爱好、好恶等（例如：“我正在学 Python”、“我受不了堵车”）。
-        -   **语言特征：** 记录用户的说话方式：正式还是随意？是否使用行业术语？句子长短？倾向于提问还是陈述？
-        -   **情绪语气：** 判断对话的整体情绪：积极、消极还是中性？是否存在强烈的情绪波动（如兴奋、沮丧、愤怒）？
-        -   **反复出现的主题：** 用户经常谈论哪些话题？什么事情最占据他们的注意力？
+        在对话中寻找原始、客观的数据点。
+        -   **明确陈述：** 用户直接提到的事实，如地点、技能、爱好等。
+        -   **语言特征：** 用户的说话方式：正式/随意？是否使用术语？
+        -   **情绪语气：** 对话的整体情绪：积极、消极、中性？
+        -   **反复出现的主题：** 用户经常谈论的话题。
 
         ## 第二步 —— 洞见合成（推断）
-        这是你的核心功能。将第一步收集的证据串联成推理链，推断出潜在的心理特质。所有推断都必须有据可循。在填充 `personalityAndValues` 字段时，**优先使用下面的五大人格模型（Big Five）作为你的核心分析框架**。
-
-        ### **聚焦五大人格模型 (Big Five) 的推断指南**
+        将证据串联，推断潜在特质。**使用下面的五大人格模型（Big Five）作为你的核心分析框架**。
 
         #### 1. 开放性 (Openness - O)
-        -   **核心定义：** 对新思想、艺术、情感、冒险和不寻常体验的开放与接纳程度。
-        -   **寻找信号：**
-            -   谈论艺术、音乐、文学，或表达对美的欣赏。
-            -   表现出强烈的好奇心，喜欢学习新知识或新技能。
-            -   喜欢抽象思考、讨论哲学或复杂概念。
-            -   乐于尝试新事物、去新的地方或打破常规。
-        -   **推断示例：**
-            -   用户说：“我喜欢逛博物馆，思考画作背后的象征意义。” -> 推断 `inferredBigFiveKeywords.openness: ["审美", "富有想象力"]`
-            -   用户问：“这个技术背后的原理是什么？我想深入了解一下。” -> 推断 `inferredBigFiveKeywords.openness: ["好奇", "智力驱动"]`
+        -   **信号：** 谈论艺术、音乐、哲学；表现出强烈的好奇心；喜欢抽象思考。
+        -   **推断示例：** 用户说：“我喜欢逛博物馆。” -> 推断 `inferredBigFiveKeywords.openness: ["审美", "富有想象力"]`
 
         #### 2. 尽责性 (Conscientiousness - C)
-        -   **核心定义：** 自我约束、有条理、目标导向以及遵守规范的程度。
-        -   **寻找信号：**
-            -   谈论计划、日程、截止日期和目标。
-            -   表现出对细节的关注和对工作的严谨。
-            -   提及自律行为（如坚持锻炼、学习打卡）。
-            -   表达对责任感和可靠性的重视。
-        -   **推断示例：**
-            -   用户说：“我必须在周五前完成这个项目，所以我已经列好了每天的任务清单。” -> 推断 `inferredBigFiveKeywords.conscientiousness: ["有条理", "目标驱动"]`
-            -   用户说：“虽然很想放松，但我还是坚持完成了今天的学习任务。” -> 推断 `inferredBigFiveKeywords.conscientiousness: ["自律", "尽责"]`
+        -   **信号：** 谈论计划、日程、目标；表现出对细节的关注；提及自律行为。
+        -   **推断示例：** 用户说：“我已列好每天的任务清单。” -> 推断 `inferredBigFiveKeywords.conscientiousness: ["有条理", "目标驱动"]`
 
         #### 3. 外向性 (Extraversion - E)
-        -   **核心定义：** 从社交互动中获取能量的程度，以及热情、自信和社交活跃度。
-        -   **寻找信号：**
-            -   喜欢谈论与朋友、团队的活动，享受成为众人瞩目的焦点。
-            -   语言充满能量、热情洋溢。
-            -   在对话中表现得健谈、果断、主动。
-            -   反向信号（内向）：偏爱独处、安静的环境，谈话更深入而非广泛。
-        -   **推断示例：**
-            -   用户说：“周末跟一大群朋友出去玩真是太棒了，给我充满了电！” -> 推断 `inferredBigFiveKeywords.extraversion: ["社交活跃", "精力充沛"]`
-            -   用户说：“我更喜欢和一两个知心朋友深入聊天，而不是参加大型派对。” -> 推断 `inferredBigFiveKeywords.extraversion: ["内省", "安静"]` (此为低外向性表现)
+        -   **信号：** 喜欢谈论社交活动；语言充满能量；在对话中健谈、主动。
+        -   **推断示例：** 用户说：“周末跟朋友出去玩太棒了！” -> 推断 `inferredBigFiveKeywords.extraversion: ["社交活跃", "精力充沛"]`
 
         #### 4. 宜人性 (Agreeableness - A)
-        -   **核心定义：** 在社交中表现出的同情心、合作性、信任和利他倾向。
-        -   **寻找信号：**
-            -   表达对他人的关心和同理心。
-            -   在对话中使用合作性语言（如“我们”、“一起”）。
-            -   倾向于避免冲突，寻求和谐。
-            -   表现出对他人动机的信任。
-        -   **推断示例：**
-            -   用户说：“我能理解他的难处，我们应该想办法帮帮他。” -> 推断 `inferredBigFiveKeywords.agreeableness: ["有同理心", "乐于助人"]`
-            -   用户说：“我觉得争论这个没意义，大家各退一步吧。” -> 推断 `inferredBigFiveKeywords.agreeableness: ["合作", "寻求和谐"]`
+        -   **信号：** 表达对他人的关心和同理心；使用合作性语言；倾向于避免冲突。
+        -   **推断示例：** 用户说：“我能理解他的难处，我们应该帮帮他。” -> 推断 `inferredBigFiveKeywords.agreeableness: ["有同理心", "乐于助人"]`
 
         #### 5. 情绪稳定性 (Neuroticism - N 的反面)
-        -   **核心定义：** 情绪的稳定程度。低神经质性（高稳定性）意味着平静、自信、不易焦虑。高神经质性意味着容易体验到焦虑、愤怒、沮丧等负面情绪。
-        -   **寻找信号：**
-            -   频繁表达担忧、焦虑或压力。
-            -   对小事反应过度，情绪波动大。
-            -   表现出自我怀疑或悲观的看法。
-            -   反向信号（高稳定性）：在谈论挑战时表现出冷静、乐观的态度。
-        -   **推断示例：**
-            -   用户说：“这点小事又让我焦虑了一整天，总是担心会出岔子。” -> 推断 `inferredBigFiveKeywords.neuroticism: ["易焦虑", "担忧"]`
-            -   用户说：“虽然遇到了困难，但我相信总有解决办法的，不急。” -> 推断 `inferredBigFiveKeywords.neuroticism: ["沉着", "情绪稳定"]`
-
-        # 高质量推断的指导原则
-        -   **超越字面：** 你的价值在于发现“为什么”，而不仅是“是什么”。优先识别动机、价值观和内在倾向。
-        -   **以证据为根基：** 输出的每一条推断都应能明确追溯到对话中的具体证据。
-        -   **保守原则：** 如果信号薄弱或模棱两可，**绝不包含**该推断。宁可返回空对象，也不要输出低置信度的信息。
-        -   **合成而非罗列：** 关注模式。例如，用户提到了三款不同的设计工具，关键洞见不是列出这三项技能，而是标注 `characterTags: ["创意工作者", "设计师"]`。
-
-        # 绝对指令（必须严格遵守）
-        **以下规则是强制性的，必须无条件执行：**
-        1.  **语言一致性优先：** 所有输出的字符串值的语言**必须**与 `conversation_history` 中用户使用的语言保持完全一致。
-        2.  **只打补丁，不替换 (PATCH, DON'T REPLACE)：** 输出的 JSON **只能**包含新增或发生变化的键值对。
-        3.  **纯净 JSON 输出：** 最终输出必须是一个单一、语法完全正确的 JSON 对象。禁止包含任何解释性文字、注释或 Markdown 格式。
-        4.  **无变更则返回空对象：** 如果无需任何新增或更新，必须返回一个空的 JSON 对象：`{{}}`。
-        5.  **列表更新规则：** 简单列表只包含**新增项**；对象列表包含**完整的新增对象**。
-
-        # 端到端教学示例
-        **`existing_profile`（输入）：**
-        ```json
-        {{
-        "knowledgeAndInterests": {{
-            "topics": ["科技"]
-        }}
-        }}
-        ```
-        **`conversation_history`（输入）：**
-        ```
-        user: 我最近在学着自己做木工，虽然过程很慢，需要极大的耐心和精确的计划，但看着一块原始的木头在自己手里慢慢变成一件有用的家具，那种成就感真的无可替代。我希望能做出既美观又实用的东西。
-        ```
-        **正确的 JSON Patch 输出示例：**
-        ```json
-        {{
-        "personalityAndValues": {{
-            "inferredBigFiveKeywords": {{
-            "conscientiousness": ["有条理", "耐心"],
-            "openness": ["审美"]
-            }},
-            "values": ["成就感", "实用主义", "美学"],
-            "characterTags": ["创造者", "手艺人"]
-        }},
-        "knowledgeAndInterests": {{
-            "hobbies": ["木工"]
-        }}
-        }}
-        ```
-
+        -   **信号：** 频繁表达担忧、焦虑；情绪波动大；表现出自我怀疑。
+        -   **推断示例：** 用户说：“这点小事又让我焦虑了一整天。” -> 推断 `inferredBigFiveKeywords.neuroticism: ["易焦虑", "担忧"]`
         ---
 
-        # 模式参考（字段名与结构）
+        # 绝对指令（必须遵守）：
+        1.  **输出完整对象**：你的输出 **必须** 是代表 `posterior_belief` 的、完整的、自包含的 `UserProfile` JSON对象。不要输出补丁（Patch）。
+        2.  **语言一致性**：输出JSON中所有字符串值的语言 **必须** 与用户在 `conversation_history` 中使用的语言保持一致。
+        3.  **纯净JSON输出**：你的全部输出必须是一个单一、原始且语法正确的JSON对象。不要包含任何解释、注释或Markdown格式。
+        4.  **无变更规则**：如果 `new_evidence` 未提供任何可以更新 `prior_belief` 的新洞见，你 **必须** 再次输出原始的 `prior_belief` JSON对象，保持其完全不变。
+
+        # 模式参考 (`UserProfile`)
         ```json
-        {json.dumps(profile_schema_str, indent=2)}
+        {json.dumps(profile_schema_str, indent=2, ensure_ascii=False)}
         ```
-
         ---
+        # 开始你的任务
 
-        # 现在开始你的任务
-        请应用上述严格流程分析下面数据。
-
-        **`existing_profile`:**
+        **`prior_belief` (先验信念 / `existing_profile`):**
         ```json
         {profile_str}
         ```
 
-        **`conversation_history`:**
+        **`new_evidence` (新证据 / `conversation_history`):**
         ```
         {history_str}
         ```
@@ -1542,30 +1475,28 @@ class LangGraphService:
         prompt = self.prompter.create_profile_update_prompt(
             state['conversation_history'], state['user_profile'])
 
-        profile_update_data = self._call_llm_for_json_content(
+        # LLM is expected to return the complete, updated profile object based on the new prompt
+        updated_profile_data = self._call_llm_for_json_content(
             prompt, PROFILE_MODEL, 0.2)
 
-        if not profile_update_data or "error" in profile_update_data:
+        if not updated_profile_data or "error" in updated_profile_data:
             logging.warning("画像更新 LLM 调用失败或返回空，跳过更新。")
-            return {}  # 不做任何修改
+            return {}  # Do not modify the state
 
         try:
-            # 不再需要 sanitize，直接合并
-            current_profile_dict = state['user_profile'].model_dump()
-            updated_profile_dict = self._deep_merge_dicts(
-                current_profile_dict, profile_update_data)  # 直接使用LLM的输出
-            updated_profile = UserProfile.model_validate(updated_profile_dict)
+            # Directly validate the full profile object returned by the LLM
+            updated_profile = UserProfile.model_validate(updated_profile_data)
 
             logging.info("用户画像更新成功。")
-            # 更新快照中的画像部分，以便后续节点能用到最新的画像
+            # Update the profile in the snapshot for subsequent nodes in the same run
             updated_snapshot = state['snapshot'].model_copy(
                 update={'who_profile': updated_profile})
 
             return {"user_profile": updated_profile, "snapshot": updated_snapshot}
         except ValidationError as e:
             logging.error(
-                f"画像更新 Pydantic 校验失败: {e}\n接收到的数据: {profile_update_data}")
-            return {}  # 校验失败，保持原画像
+                f"画像更新 Pydantic 校验失败: {e}\n接收到的数据: {updated_profile_data}")
+            return {}  # Validation failed, keep the original profile
 
     def format_history_for_prompt(self, history: List[BaseMessage]) -> str:
         def get_text_from_content(content):
