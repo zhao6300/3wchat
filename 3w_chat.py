@@ -1879,6 +1879,8 @@ class ChatApplication:
         if len(content_for_msg) == 1 and content_for_msg[0]["type"] == "text":
             content_for_msg = content_for_msg[0]["content"]
 
+
+
         if text_for_display:
             display_history.append(
                 {"role": "user", "content": text_for_display})
@@ -1899,6 +1901,9 @@ class ChatApplication:
             "turn_count": session_data["turn_count"],
             "active_persona": active_persona,
         }
+        
+        
+        
         if image_b64_urls:
             graph_input["image_b64_urls"] = image_b64_urls
 
@@ -1968,7 +1973,7 @@ class ChatApplication:
             response = requests.get(
                 url, stream=True, timeout=10, headers=headers)
             response.raise_for_status()
-
+            
             content_type = response.headers.get('Content-Type')
             if content_type and content_type.startswith('image'):
                 return response.content, content_type
